@@ -37,6 +37,13 @@ type Meal struct {
 	Calories int    `json:"calories"`
 }
 
+// Struct for Weight entries for the ORM
+type Weight struct {
+	ID     int     `json:"id"`
+	Date   string  `json:"date"`
+	Weight float64 `json:"weight"`
+}
+
 var db *gorm.DB
 
 func main() {
@@ -61,6 +68,7 @@ func main() {
 	// Auto migrate the schema
 	db.AutoMigrate(&Exercise{})
 	db.AutoMigrate(&Meal{})
+	db.AutoMigrate(&Weight{})
 
 	// Initialize Gin router
 	r := gin.Default()
@@ -80,6 +88,12 @@ func main() {
 	r.GET("/meals", getMeals)
 	r.PUT("/meals/:id", updateMeal)
 	r.DELETE("/meals/:id", deleteMeal)
+
+	// Routes for weight entries
+	r.POST("/weights", createWeightEntry)
+	r.GET("/weights", getWeightEntries)
+	r.PUT("/weights/:id", updateWeightEntry)
+	r.DELETE("/weights/:id", deleteWeightEntry)
 
 	// Start server
 	if err := r.Run(":8080"); err != nil {
@@ -248,4 +262,87 @@ func deleteMeal(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Meal deleted successfully"})
+}
+
+// ----------------
+// Weight functions
+// ----------------
+func createWeightEntry(c *gin.Context) {
+	var weight Weight
+
+	// If error receiving weight entry, raise error
+	if err := c.ShouldBindBodyWithJSON(&weight); err != nil {
+		log.Println("JSON Bind Error:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// If weight entry is <= 0, raise error
+	if weight.Weight <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid weight input value"})
+		return
+	}
+
+	// If error creating DB entry, throw internal error
+	if err := db.Create(&weight).Error; err != nil {
+		log.Println("DB Insert Error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create weight entry"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, weight)
+}
+
+func getWeightEntries(c *gin.Context) {
+	var weights []Weight
+	if err := db.Order("created_at DESC").Find(&weights).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch weight entries"})
+		return
+	}
+	c.JSON(http.StatusOK, weights)
+}
+
+func updateWeightEntry(c *gin.Context) {
+	id := c.Param("id")
+	var weight Weight
+	// If we can't find the specific entry, raise an error
+	if err := db.First(&weight, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Weight entry not found"})
+		return
+	}
+	// If request is malformed, we raise an error
+	if err := c.ShouldBindJSON(&weight); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// If we can't update for some reason, we raise an error
+	if err := db.Save(&weight).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update weight entry"})
+		return
+	}
+
+	c.JSON(http.StatusOK, weight)
+}
+
+func deleteWeightEntry(c *gin.Context) {
+	id := c.Param("id")
+
+	if id == "" || id == "undefined" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid weight entry ID"})
+		return
+	}
+
+	// Using Where clause to properly structure the query
+	result := db.Where("id = ?", id).Delete(&Weight{})
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete weight entry"})
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Weight entry not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Weight entry deleted successfully"})
 }
