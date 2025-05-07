@@ -289,12 +289,14 @@ func createWeightEntry(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create weight entry"})
 		return
 	}
+
+	c.JSON(http.StatusCreated, weight)
 }
 
 func getWeightEntries(c *gin.Context) {
 	var weights []Weight
 	if err := db.Order("created_at DESC").Find(&weights).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch meals"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch weight entries"})
 		return
 	}
 	c.JSON(http.StatusOK, weights)
@@ -305,7 +307,7 @@ func updateWeightEntry(c *gin.Context) {
 	var weight Weight
 	// If we can't find the specific entry, raise an error
 	if err := db.First(&weight, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Meal not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Weight entry not found"})
 		return
 	}
 	// If request is malformed, we raise an error
@@ -331,7 +333,7 @@ func deleteWeightEntry(c *gin.Context) {
 	}
 
 	// Using Where clause to properly structure the query
-	result := db.Where("id = ?", id).Delete(&Meal{})
+	result := db.Where("id = ?", id).Delete(&Weight{})
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete weight entry"})
 		return
