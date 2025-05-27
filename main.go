@@ -39,6 +39,7 @@ type Meal struct {
 
 // Struct for Weight entries for the ORM
 type Weight struct {
+	gorm.Model
 	ID     int     `json:"id"`
 	Date   string  `json:"date"`
 	Weight float64 `json:"weight"`
