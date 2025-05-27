@@ -109,26 +109,43 @@ func createExercise(c *gin.Context) {
 
 	log.Println("Received request to create exercise")
 
-	if err := c.ShouldBindJSON(&exercise); err != nil {
-		log.Println("JSON Bind Error:", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
-		return
-	}
+	// if err := c.ShouldBindJSON(&exercise); err != nil {
+	// 	log.Println("JSON Bind Error:", err)
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	// 	return
+	// }
 
 	log.Printf("Parsed Data: %+v\n", exercise)
 
-	if exercise.Sets <= 0 || exercise.Reps <= 0 || exercise.Weight < 0 {
+	// if exercise.Sets <= 0 || exercise.Reps <= 0 || exercise.Weight < 0 {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values"})
+	// 	return
+	// }
+
+	// if err := db.Create(&exercise).Error; err != nil {
+	// 	log.Println("DB Insert Error:", err)
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create exercise"})
+	// 	return
+	// }
+
+	// example refactor with switches
+	// format_err := c.ShouldBindJSON(&exercise)
+	// input_err := exercise.Sets <= 0 || exercise.Reps <= 0 || exercise.Weight < 0
+	// creation_err := db.Create(&exercise).Error
+
+	switch {
+	case c.ShouldBindJSON(&exercise) != nil:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	case exercise.Sets <= 0 || exercise.Reps <= 0 || exercise.Weight < 0:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input values"})
 		return
-	}
-
-	if err := db.Create(&exercise).Error; err != nil {
-		log.Println("DB Insert Error:", err)
+	case db.Create(&exercise).Error != nil:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create exercise"})
 		return
+	default:
+		c.JSON(http.StatusCreated, exercise)
 	}
-
-	c.JSON(http.StatusCreated, exercise)
 }
 
 func getExercises(c *gin.Context) {
