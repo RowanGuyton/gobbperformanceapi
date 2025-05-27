@@ -16,7 +16,7 @@ import (
 // Struct for Movements for the ORM
 type Exercise struct {
 	gorm.Model
-	// ID       int     `json:"id"`
+	ID       int     `json:"id"`
 	Date     string  `json:"date"`
 	Movement string  `json:"movement"`
 	Sets     int     `json:"sets"`
@@ -28,7 +28,7 @@ type Exercise struct {
 // Struct for Meals for the ORM
 type Meal struct {
 	gorm.Model
-	// ID       int    `json:"id"`
+	ID       int    `json:"id"`
 	Date     string `json:"date"`
 	Name     string `json:"name"`
 	Carbs    int    `json:"carbs"`
